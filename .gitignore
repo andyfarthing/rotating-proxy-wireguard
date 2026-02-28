@@ -1,0 +1,52 @@
+configs/*.conf
+
+# Go
+/proxy/multi-wireguard-proxy
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+vendor/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+.pytest_cache/
+tests/.venv/
+.venv/
+venv/
+*.pyc
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+# VS Code
+.vscode/
+
+# JetBrains IDEs
+.idea/
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Docker
+docker-compose.override.yml
+
+# Logs
+*.log
