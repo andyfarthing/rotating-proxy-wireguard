@@ -4,7 +4,7 @@ An HTTP/HTTPS proxy that routes outbound connections through a pool of WireGuard
 
 ## How it works
 
-1. On startup, the entrypoint script reads all `.conf` files from `configs/`, brings up a WireGuard interface for each, and configures per-tunnel policy routing so that outbound traffic is bound to the correct interface.
+1. On startup, the entrypoint script reads all `.conf` files from `configs/`, brings up a WireGuard interface for each, and writes a manifest of interface names and addresses for the Go proxy. Each connection is bound to its assigned interface via `SO_BINDTODEVICE`; no policy routing is needed.
 
 2. The Go proxy listens for HTTP and HTTPS (`CONNECT`) requests and leases a tunnel slot to each connection from the pool.
 
@@ -27,7 +27,7 @@ docker compose up --build
 
 The proxy is available at `http://localhost:8080`. Configure your HTTP client or tool to use this as its proxy.
 
-The web UI is available at `http://localhost:8088` and shows per-tunnel status and statistics.
+The web UI is available at `http://localhost:8088` and shows per-tunnel status, traffic statistics, and the exit country for each tunnel (resolved via GeoIP on first use and cached for the container lifetime). It refreshes automatically every second without reloading the page.
 
 ## Environment variables
 

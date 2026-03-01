@@ -30,15 +30,16 @@ type StatusResponse struct {
 
 // TunnelStatusEntry combines lease pool state with WireGuard telemetry.
 type TunnelStatusEntry struct {
-	Interface       string    `json:"interface"`
-	Address         string    `json:"address"`
-	Status          string    `json:"status"` // "free" | "busy"
-	ClientAddr      string    `json:"client_addr,omitempty"`
-	LeaseDuration   string    `json:"lease_duration,omitempty"`
-	PeerEndpoint    string    `json:"peer_endpoint,omitempty"`
-	LatestHandshake string    `json:"latest_handshake,omitempty"`
-	TxBytes         int64     `json:"tx_bytes"`
-	RxBytes         int64     `json:"rx_bytes"`
+	Interface       string `json:"interface"`
+	Address         string `json:"address"`
+	Status          string `json:"status"` // "free" | "busy"
+	ClientAddr      string `json:"client_addr,omitempty"`
+	LeaseDuration   string `json:"lease_duration,omitempty"`
+	PeerEndpoint    string `json:"peer_endpoint,omitempty"`
+	ExitCountry     string `json:"exit_country,omitempty"` // ISO 3166-1 alpha-2, e.g. "NL"
+	LatestHandshake string `json:"latest_handshake,omitempty"`
+	TxBytes         int64  `json:"tx_bytes"`
+	RxBytes         int64  `json:"rx_bytes"`
 }
 
 func (h *webUIHandler) handleStatus(w http.ResponseWriter, r *http.Request) {
@@ -76,6 +77,7 @@ func (h *webUIHandler) handleStatus(w http.ResponseWriter, r *http.Request) {
 
 		if peer, ok := peerByIface[lease.Interface]; ok {
 			entry.PeerEndpoint = peer.Endpoint
+			entry.ExitCountry = peer.CountryCode
 			entry.TxBytes = peer.TxBytes
 			entry.RxBytes = peer.RxBytes
 			if !peer.LatestHandshake.IsZero() {
@@ -136,7 +138,6 @@ const uiHTML = `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="refresh" content="5">
 <title>WireGuard Proxy — Status</title>
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
@@ -151,6 +152,8 @@ const uiHTML = `<!DOCTYPE html>
   .badge{display:inline-block;padding:.2em .6em;border-radius:999px;font-size:.75rem;font-weight:600}
   .free{background:#14532d;color:#86efac}
   .busy{background:#7c2d12;color:#fca5a5}
+  .warming{background:#713f12;color:#fde68a}
+  .degraded{background:#1e293b;color:#94a3b8}
   .iface{font-family:monospace;font-weight:700;color:#93c5fd}
   .addr{font-family:monospace;color:#a5b4fc}
   .endpoint{font-family:monospace;font-size:.8rem;color:#67e8f9}
@@ -175,7 +178,7 @@ const uiHTML = `<!DOCTYPE html>
 </tr></thead>
 <tbody id="tbody"><tr><td colspan="8" style="text-align:center;padding:2rem;color:#64748b">Loading…</td></tr></tbody>
 </table>
-<div class="footer">Auto-refreshes every 5 seconds &bull; <a href="/api/status" style="color:#475569">JSON API</a></div>
+<div class="footer">Auto-refreshes every second &bull; <a href="/api/status" style="color:#475569">JSON API</a></div>
 
 <script>
 function fmt(b){
@@ -191,6 +194,50 @@ function ago(ts){
   if(s<60)return s+'s ago';
   if(s<3600)return Math.floor(s/60)+'m ago';
   return Math.floor(s/3600)+'h ago';
+}// ISO 3166-1 alpha-2 → country name.
+const COUNTRY={
+  AD:'Andorra',AE:'United Arab Emirates',AF:'Afghanistan',AG:'Antigua and Barbuda',
+  AL:'Albania',AM:'Armenia',AO:'Angola',AR:'Argentina',AT:'Austria',AU:'Australia',
+  AZ:'Azerbaijan',BA:'Bosnia and Herzegovina',BB:'Barbados',BD:'Bangladesh',BE:'Belgium',
+  BF:'Burkina Faso',BG:'Bulgaria',BH:'Bahrain',BI:'Burundi',BJ:'Benin',BN:'Brunei',
+  BO:'Bolivia',BR:'Brazil',BS:'Bahamas',BT:'Bhutan',BW:'Botswana',BY:'Belarus',
+  BZ:'Belize',CA:'Canada',CD:'DR Congo',CF:'Central African Republic',CG:'Congo',
+  CH:'Switzerland',CI:'Ivory Coast',CL:'Chile',CM:'Cameroon',CN:'China',CO:'Colombia',
+  CR:'Costa Rica',CU:'Cuba',CV:'Cape Verde',CY:'Cyprus',CZ:'Czech Republic',
+  DE:'Germany',DJ:'Djibouti',DK:'Denmark',DM:'Dominica',DO:'Dominican Republic',
+  DZ:'Algeria',EC:'Ecuador',EE:'Estonia',EG:'Egypt',ER:'Eritrea',ES:'Spain',
+  ET:'Ethiopia',FI:'Finland',FJ:'Fiji',FR:'France',GA:'Gabon',GB:'United Kingdom',
+  GD:'Grenada',GE:'Georgia',GH:'Ghana',GM:'Gambia',GN:'Guinea',GQ:'Equatorial Guinea',
+  GR:'Greece',GT:'Guatemala',GW:'Guinea-Bissau',GY:'Guyana',HN:'Honduras',HR:'Croatia',
+  HT:'Haiti',HU:'Hungary',ID:'Indonesia',IE:'Ireland',IL:'Israel',IN:'India',
+  IQ:'Iraq',IR:'Iran',IS:'Iceland',IT:'Italy',JM:'Jamaica',JO:'Jordan',JP:'Japan',
+  KE:'Kenya',KG:'Kyrgyzstan',KH:'Cambodia',KI:'Kiribati',KM:'Comoros',KN:'Saint Kitts and Nevis',
+  KP:'North Korea',KR:'South Korea',KW:'Kuwait',KZ:'Kazakhstan',LA:'Laos',LB:'Lebanon',
+  LC:'Saint Lucia',LI:'Liechtenstein',LK:'Sri Lanka',LR:'Liberia',LS:'Lesotho',
+  LT:'Lithuania',LU:'Luxembourg',LV:'Latvia',LY:'Libya',MA:'Morocco',MC:'Monaco',
+  MD:'Moldova',ME:'Montenegro',MG:'Madagascar',MH:'Marshall Islands',MK:'North Macedonia',
+  ML:'Mali',MM:'Myanmar',MN:'Mongolia',MR:'Mauritania',MT:'Malta',MU:'Mauritius',
+  MV:'Maldives',MW:'Malawi',MX:'Mexico',MY:'Malaysia',MZ:'Mozambique',NA:'Namibia',
+  NE:'Niger',NG:'Nigeria',NI:'Nicaragua',NL:'Netherlands',NO:'Norway',NP:'Nepal',
+  NR:'Nauru',NZ:'New Zealand',OM:'Oman',PA:'Panama',PE:'Peru',PG:'Papua New Guinea',
+  PH:'Philippines',PK:'Pakistan',PL:'Poland',PT:'Portugal',PW:'Palau',PY:'Paraguay',
+  QA:'Qatar',RO:'Romania',RS:'Serbia',RU:'Russia',RW:'Rwanda',SA:'Saudi Arabia',
+  SB:'Solomon Islands',SC:'Seychelles',SD:'Sudan',SE:'Sweden',SG:'Singapore',
+  SI:'Slovenia',SK:'Slovakia',SL:'Sierra Leone',SM:'San Marino',SN:'Senegal',
+  SO:'Somalia',SR:'Suriname',SS:'South Sudan',ST:'São Tomé and Príncipe',SV:'El Salvador',
+  SY:'Syria',SZ:'Eswatini',TD:'Chad',TG:'Togo',TH:'Thailand',TJ:'Tajikistan',
+  TL:'Timor-Leste',TM:'Turkmenistan',TN:'Tunisia',TO:'Tonga',TR:'Turkey',
+  TT:'Trinidad and Tobago',TV:'Tuvalu',TW:'Taiwan',TZ:'Tanzania',UA:'Ukraine',
+  UG:'Uganda',US:'United States',UY:'Uruguay',UZ:'Uzbekistan',VA:'Vatican City',
+  VC:'Saint Vincent and the Grenadines',VE:'Venezuela',VN:'Vietnam',VU:'Vanuatu',
+  WS:'Samoa',YE:'Yemen',ZA:'South Africa',ZM:'Zambia',ZW:'Zimbabwe'
+};
+// Converts a 2-letter ISO country code to a flag emoji wrapped in a tooltip span.
+function flag(cc){
+  if(!cc||cc.length!==2)return'';
+  const emoji=String.fromCodePoint(0x1F1E6+cc.charCodeAt(0)-65,0x1F1E6+cc.charCodeAt(1)-65);
+  const name=COUNTRY[cc.toUpperCase()]||cc;
+  return '<span title="'+name+'" style="cursor:default">'+emoji+'</span>\u00a0';
 }
 async function refresh(){
   try{
@@ -202,7 +249,7 @@ async function refresh(){
         '<td><span class="iface">'+t.interface+'</span></td>'+
         '<td><span class="addr">'+(t.address||'—')+'</span></td>'+
         '<td><span class="badge '+t.status+'">'+t.status+'</span></td>'+
-        '<td><span class="endpoint">'+(t.peer_endpoint||'—')+'</span></td>'+
+        '<td><span class="endpoint">'+flag(t.exit_country)+(t.peer_endpoint||'—')+'</span></td>'+
         '<td><span class="ts">'+ago(t.latest_handshake)+'</span></td>'+
         '<td><span class="bytes">'+fmt(t.tx_bytes)+'</span></td>'+
         '<td><span class="bytes">'+fmt(t.rx_bytes)+'</span></td>'+
@@ -213,7 +260,7 @@ async function refresh(){
   }catch(e){console.error(e)}
 }
 refresh();
-setInterval(refresh,5000);
+setInterval(refresh,1000);
 </script>
 </body>
 </html>

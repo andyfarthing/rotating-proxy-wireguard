@@ -5,6 +5,8 @@ import (
 	"bytes"
 	"fmt"
 	"log/slog"
+	"net"
+	"net/http"
 	"os"
 	"os/exec"
 	"strconv"
@@ -28,6 +30,58 @@ type PeerStats struct {
 	LatestHandshake time.Time
 	TxBytes         int64
 	RxBytes         int64
+	CountryCode     string // ISO 3166-1 alpha-2, populated via GeoIP lookup
+}
+
+// geoCache caches IP → ISO country code lookups so we only hit the API once per IP.
+var geoCache sync.Map
+
+// lookupCountry returns the ISO 3166-1 alpha-2 country code for the given
+// WireGuard endpoint ("ip:port" or bare IP). The lookup is performed
+// asynchronously so it never blocks the stats refresh. Successful results are
+// cached permanently; failed lookups are retried on each subsequent stats cycle
+// so that a transient service outage at startup does not permanently suppress
+// the country flag.
+func lookupCountry(endpoint string) string {
+	if endpoint == "" {
+		return ""
+	}
+	// Strip port if present.
+	ip := endpoint
+	if host, _, err := net.SplitHostPort(endpoint); err == nil {
+		ip = host
+	}
+	if v, ok := geoCache.Load(ip); ok {
+		return v.(string)
+	}
+	// No cached result — fire a background lookup. LoadOrStore with a sentinel
+	// prevents duplicate concurrent goroutines for the same IP.
+	if _, loaded := geoCache.LoadOrStore(ip+"_inflight", struct{}{}); !loaded {
+		go func() {
+			cc := fetchCountry(ip)
+			if cc != "" {
+				// Only cache on success so failed lookups are retried next cycle.
+				geoCache.Store(ip, cc)
+			}
+			geoCache.Delete(ip + "_inflight")
+		}()
+	}
+	return ""
+}
+
+// fetchCountry calls the ipinfo.io GeoIP service and returns the ISO
+// country code, or an empty string on any error.
+func fetchCountry(ip string) string {
+	client := &http.Client{Timeout: 5 * time.Second}
+	resp, err := client.Get("https://ipinfo.io/" + ip + "/country")
+	if err != nil {
+		slog.Debug("geoip lookup failed", "ip", ip, "err", err)
+		return ""
+	}
+	defer resp.Body.Close()
+	buf := make([]byte, 8)
+	n, _ := resp.Body.Read(buf)
+	return strings.TrimSpace(strings.ToUpper(string(buf[:n])))
 }
 
 // InterfaceProcStats holds byte counters from /proc/net/dev.
@@ -135,6 +189,7 @@ func parseWGDump() ([]PeerStats, error) {
 			LatestHandshake: latestHandshake,
 			TxBytes:         txBytes,
 			RxBytes:         rxBytes,
+			CountryCode:     lookupCountry(endpoint),
 		})
 	}
 	return peers, scanner.Err()
