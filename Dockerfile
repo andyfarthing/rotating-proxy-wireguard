@@ -51,9 +51,9 @@ ENV CONFIG_DIR=/etc/wireguard/configs \
     MANIFEST_PATH=/run/wg-proxy/manifest.json \
     PROXY_PORT=8080 \
     WEB_UI_PORT=8088 \
-    LEASE_TIMEOUT=30s \
-    DIAL_TIMEOUT=30s \
-    STATS_INTERVAL=5s \
+    LEASE_TIMEOUT=30 \
+    DIAL_TIMEOUT=30 \
+    STATS_INTERVAL=5 \
     LOG_LEVEL=info
 
 # Proxy port

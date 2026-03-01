@@ -16,9 +16,9 @@ const (
 	defaultManifestPath  = "/run/wg-proxy/manifest.json"
 	defaultProxyPort     = "8080"
 	defaultWebUIPort     = "8088"
-	defaultLeaseTimeout  = "30s"
-	defaultDialTimeout   = "30s"
-	defaultStatsInterval = "5s"
+	defaultLeaseTimeout  = "30"
+	defaultDialTimeout   = "30"
+	defaultStatsInterval = "5"
 )
 
 func main() {
@@ -123,6 +123,10 @@ func env(key, fallback string) string {
 func mustDuration(key, fallback string) time.Duration {
 	raw := env(key, fallback)
 	d, err := time.ParseDuration(raw)
+	if err != nil {
+		// Allow bare numbers (e.g. "30") to be treated as seconds.
+		d, err = time.ParseDuration(raw + "s")
+	}
 	if err != nil {
 		panic(fmt.Sprintf("invalid duration for %s=%q: %v", key, raw, err))
 	}

@@ -469,7 +469,7 @@ class TestPoolExhaustion:
         matching LEASE_TIMEOUT. Otherwise it is skipped.
 
         To test:
-          LEASE_TIMEOUT=2s docker compose up -d
+          LEASE_TIMEOUT=2 docker compose up -d
           LEASE_TIMEOUT_SECONDS=2 pytest tests/ -v -m slow
         """
         timeout_sec = int(os.getenv("LEASE_TIMEOUT_SECONDS", "0"))
@@ -477,7 +477,7 @@ class TestPoolExhaustion:
             pytest.skip(
                 "Set LEASE_TIMEOUT_SECONDS=N (matching the container's LEASE_TIMEOUT) "
                 "to run this test. E.g.:\n"
-                "  LEASE_TIMEOUT=2s docker compose up -d\n"
+                "  LEASE_TIMEOUT=2 docker compose up -d\n"
                 "  LEASE_TIMEOUT_SECONDS=2 pytest tests/ -v -m slow -k 503"
             )
 

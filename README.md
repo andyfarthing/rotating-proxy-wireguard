@@ -31,16 +31,16 @@ The web UI is available at `http://localhost:8088` and shows per-tunnel status, 
 
 ## Environment variables
 
-| Variable         | Default                       | Description                                             |
-| ---------------- | ----------------------------- | ------------------------------------------------------- |
-| `PROXY_PORT`     | `8080`                        | Port the proxy listens on                               |
-| `WEB_UI_PORT`    | `8088`                        | Port the web UI listens on (`0` to disable)             |
-| `LEASE_TIMEOUT`  | `30s`                         | How long to wait for a free tunnel before returning 503 |
-| `DIAL_TIMEOUT`   | `30s`                         | Timeout for dialling upstream through the tunnel        |
-| `STATS_INTERVAL` | `5s`                          | How often to poll WireGuard stats for the web UI        |
-| `LOG_LEVEL`      | `info`                        | Log verbosity: `debug`, `info`, `warn`, `error`         |
-| `CONFIG_DIR`     | `/etc/wireguard/configs`      | Directory scanned for `.conf` files                     |
-| `MANIFEST_PATH`  | `/run/wg-proxy/manifest.json` | Path for the interface manifest written at startup      |
+| Variable         | Default                       | Description                                                                                                                                    |
+| ---------------- | ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `PROXY_PORT`     | `8080`                        | Port the proxy listens on                                                                                                                      |
+| `WEB_UI_PORT`    | `8088`                        | Port the web UI listens on (`0` to disable)                                                                                                    |
+| `LEASE_TIMEOUT`  | `30`                          | How long to wait for a free tunnel before returning 503. Accepts a plain number (seconds) or a Go duration string (e.g. `30`, `30s`, `500ms`). |
+| `DIAL_TIMEOUT`   | `30`                          | Timeout for dialling upstream through the tunnel. Accepts a plain number (seconds) or a Go duration string.                                    |
+| `STATS_INTERVAL` | `5`                           | How often to poll WireGuard stats for the web UI. Accepts a plain number (seconds) or a Go duration string.                                    |
+| `LOG_LEVEL`      | `info`                        | Log verbosity: `debug`, `info`, `warn`, `error`                                                                                                |
+| `CONFIG_DIR`     | `/etc/wireguard/configs`      | Directory scanned for `.conf` files                                                                                                            |
+| `MANIFEST_PATH`  | `/run/wg-proxy/manifest.json` | Path for the interface manifest written at startup                                                                                             |
 
 ## Running tests
 

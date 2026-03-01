@@ -20,12 +20,12 @@ services:
     environment:
       PROXY_PORT: "8080"
       WEB_UI_PORT: "8088"
-      # Time to wait for a free tunnel before returning 503.
-      LEASE_TIMEOUT: "30s"
-      # Timeout for dialling upstream through the tunnel.
-      DIAL_TIMEOUT: "30s"
-      # How often to poll WireGuard stats for the web UI.
-      STATS_INTERVAL: "1s"
+      # Time to wait for a free tunnel before returning 503 (plain seconds, or Go duration e.g. "500ms").
+      LEASE_TIMEOUT: "30"
+      # Timeout for dialling upstream through the tunnel (plain seconds, or Go duration e.g. "500ms").
+      DIAL_TIMEOUT: "30"
+      # How often to poll WireGuard stats for the web UI (plain seconds, or Go duration e.g. "500ms").
+      STATS_INTERVAL: "1"
       # Log verbosity: debug | info | warn | error
       LOG_LEVEL: "info"
 
